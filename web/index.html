@@ -1,0 +1,26 @@
+<html>
+  <head title="ws test">
+    <script type='text/javascript'>
+      // ws = new WebSocket("wss://localhost:8888/web-socket")
+      ws = new WebSocket("ws://localhost:8888/web-socket")
+      ws.onmessage = function (evt) {
+          console.log("got ws message: ", evt.data);
+      };
+      ws.onerror = function(evt) {
+          console.log("onerror called:", evt.data);
+      };
+      ws.onclose = function(evt) {
+          console.log("onclose called:", evt.reason);
+      };
+      ws.onopen = function(evt) {
+          console.log ("onopen called")
+          ws.send ("some data\n");
+      };
+    </script>
+  </head>
+  <body>
+    <div id="top-div">
+      ok
+    </div>
+  </body>
+</html>
