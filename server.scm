@@ -211,17 +211,7 @@ exec csi -include-path /usr/local/share/scheme -s $0 "$@"
   (lambda (spiffy-continue)
     (cond ((equal? (uri-path (request-uri (current-request))) '(/ "web-socket"))
            (let ((ws (websocket-accept)))
-             (app-code ws)
-
-             ;; <andyjpb> yeah. you must call send-response
-             ;; <sethalves> there's no graceful shutdown on the javascript side, so possibly that message is "normal"
-             ;; <andyjpb> otherwise you mess up the protocol sync
-             ;; <andyjpb> if spiffy gets the tiniest hint that you didn't do everything neessary to qualify for keep alive then it slams it closed
-             ;; <sjamaan> You wouldn't want it to be kept alive after it's been upgraded
-             ;; <andyjpb> if you switch on the spiffy debug log (to console) you'll see when the browser closes the connection (deliberately or otherwise)
-
-
-             ))
+             (app-code ws)))
           ((equal? (uri-path (request-uri (current-request))) '(/ ""))
            ((handle-file) "index.html"))
           (else
