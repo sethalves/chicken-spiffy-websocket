@@ -151,14 +151,14 @@ exec csi -include-path /usr/local/share/scheme -s $0 "$@"
             (websocket-read-frame-payload inbound-port frame-payload-length
                                           frame-masked frame-masking-key))
            ((= frame-opcode 8)
-            (logger "websocket got close frame.\n")
-            (generate-eof-object))
+            ;; eof frame
+            #!eof)
            ((= frame-opcode 10)
-            ;; (logger "websocket got pong.\n")
+            ;; pong frame
             ;; we aren't required to respond to an unsolicited pong
             #t)
            (else
-            (logger "websocket got unhandled opcode: " frame-opcode "\n")
+            (error "websocket got unhandled opcode: " frame-opcode "\n")
             #f))))))))
 
 
