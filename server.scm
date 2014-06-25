@@ -47,12 +47,12 @@ exec csi -include-path /usr/local/share/scheme -s $0 "$@"
                   (+ i 1)))))))
 
 
-(define (websocket-send-frame ws data last-frame)
+(define (websocket-send-frame ws opcode data last-frame)
   (let* ((frame-fin (if last-frame 1 0))
          (frame-rsv1 0)
          (frame-rsv2 0)
          (frame-rsv3 0)
-         (frame-opcode 1)
+         (frame-opcode opcode)
          (octet0 (bitwise-ior (arithmetic-shift frame-fin 7)
                               (arithmetic-shift frame-rsv1 6)
                               (arithmetic-shift frame-rsv2 5)
@@ -95,7 +95,7 @@ exec csi -include-path /usr/local/share/scheme -s $0 "$@"
 
 (define (websocket-send ws data)
   ;; XXX break up large data into multiple frames?
-  (websocket-send-frame ws data #t))
+  (websocket-send-frame ws 1 data #t))
 
 
 
@@ -136,7 +136,7 @@ exec csi -include-path /usr/local/share/scheme -s $0 "$@"
                      (bl1 (read-byte inbound-port)))
                  (set! frame-payload-length (+ (arithmetic-shift bl0 8) bl1))))
               ((= frame-payload-length 127)
-               (xerror "8 byte payload length unsupported")))
+               (error "8 byte payload length unsupported")))
         (let* ((frame-masking-key
                 (if frame-masked
                     (let* ((fm0 (read-byte inbound-port))
@@ -161,6 +161,9 @@ exec csi -include-path /usr/local/share/scheme -s $0 "$@"
             (logger "websocket got unhandled opcode: " frame-opcode "\n")
             #f))))))))
 
+
+(define (websocket-close ws)
+  (websocket-send-frame ws 8 (make-u8vector 0) #t))
 
 
 (define (sha1-sum in-bv)
@@ -208,7 +211,17 @@ exec csi -include-path /usr/local/share/scheme -s $0 "$@"
   (lambda (spiffy-continue)
     (cond ((equal? (uri-path (request-uri (current-request))) '(/ "web-socket"))
            (let ((ws (websocket-accept)))
-             (app-code ws)))
+             (app-code ws)
+
+             ;; <andyjpb> yeah. you must call send-response
+             ;; <sethalves> there's no graceful shutdown on the javascript side, so possibly that message is "normal"
+             ;; <andyjpb> otherwise you mess up the protocol sync
+             ;; <andyjpb> if spiffy gets the tiniest hint that you didn't do everything neessary to qualify for keep alive then it slams it closed
+             ;; <sjamaan> You wouldn't want it to be kept alive after it's been upgraded
+             ;; <andyjpb> if you switch on the spiffy debug log (to console) you'll see when the browser closes the connection (deliberately or otherwise)
+
+
+             ))
           ((equal? (uri-path (request-uri (current-request))) '(/ ""))
            ((handle-file) "index.html"))
           (else
@@ -221,9 +234,12 @@ exec csi -include-path /usr/local/share/scheme -s $0 "$@"
   (let ((data (websocket-read-frame ws)))
     (display "got from browser: ")
     (write (apply string (map integer->char (u8vector->list data))))
-    (newline)))
+    (newline)
+    (websocket-close ws)
+    ))
 
 (vhost-map `(("localhost" . ,(make-websocket-handler application-code))))
 (server-port 8888)
 ;; (root-path "./web")
+(debug-log)
 (start-server)
