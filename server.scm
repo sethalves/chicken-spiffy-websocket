@@ -215,7 +215,7 @@ exec csi -include-path /usr/local/share/scheme -s $0 "$@"
           ((equal? (uri-path (request-uri (current-request))) '(/ ""))
            ((handle-file) "index.html"))
           (else
-           ((handle-not-found) spiffy-continue)))))
+           (spiffy-continue)))))
 
 
 
@@ -231,5 +231,5 @@ exec csi -include-path /usr/local/share/scheme -s $0 "$@"
 (vhost-map `(("localhost" . ,(make-websocket-handler application-code))))
 (server-port 8888)
 ;; (root-path "./web")
-(debug-log)
+(debug-log (current-error-port))
 (start-server)
